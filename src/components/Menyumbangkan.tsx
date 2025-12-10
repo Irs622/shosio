@@ -12,15 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-
 import { supabase } from "../lib/supabaseClient";
 
-export default function FormPengajuan() {
+const AKTIF_PROFILE_ID = 1;
+
+export default function Menyumbangkan() {
   const navigate = useNavigate();
 
   const [nama, setNama] = useState("");
   const [kategori, setKategori] = useState("Buku");
-  const [status, setStatus] = useState("Donasi");
   const [donatur, setDonatur] = useState("");
   const [deskripsi, setDeskripsi] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,23 +43,22 @@ export default function FormPengajuan() {
       const { error } = await supabase.from("posts").insert({
         nama: namaTrim,
         kategori,
-        status,
+        status: "Donasi",
         donatur: donaturTrim,
         deskripsi: deskripsiTrim || null,
         reputasi: 90,
-        owner_id: 1, // sementara user aktif dianggap id = 1
+        owner_id: AKTIF_PROFILE_ID,
       });
 
       if (error) {
         console.error(error);
-        alert("Gagal mengirim pengajuan.");
+        alert("Gagal menyimpan donasi.");
       } else {
-        alert("Pengajuan berhasil dikirim ✅");
+        alert("Terima kasih! Donasi kamu sudah tercatat ✅");
         setNama("");
         setDonatur("");
         setDeskripsi("");
         setKategori("Buku");
-        setStatus("Donasi");
         navigate("/daftar-barang");
       }
     } finally {
@@ -71,14 +70,21 @@ export default function FormPengajuan() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <div className="max-w-3xl mx-auto px-6 py-10">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">
-          Form Pengajuan Barang
-        </h1>
-        <p className="text-slate-600 mb-8">
-          Isi data berikut untuk mengajukan barang yang ingin kamu donasikan
-          atau tukarkan.
-        </p>
+      <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">
+            Menyumbangkan Barang
+          </h1>
+          <p className="text-slate-600 text-sm">
+            Bantu teman-teman mahasiswa lain dengan menyumbangkan buku, alat,
+            atau perlengkapan yang masih layak pakai.
+          </p>
+          <ul className="mt-3 text-xs text-slate-500 list-disc list-inside">
+            <li>Pastikan kondisi barang masih layak digunakan.</li>
+            <li>Tuliskan deskripsi sejujur mungkin.</li>
+            <li>Barang donasi akan muncul di halaman daftar barang.</li>
+          </ul>
+        </div>
 
         <form
           onSubmit={handleSubmit}
@@ -114,21 +120,6 @@ export default function FormPengajuan() {
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-slate-700">
-              Status
-            </label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Donasi">Donasi</SelectItem>
-                <SelectItem value="Tukar">Tukar</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-700">
               Nama Donatur
             </label>
             <Input
@@ -140,7 +131,7 @@ export default function FormPengajuan() {
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-slate-700">
-              Deskripsi (opsional)
+              Deskripsi Barang
             </label>
             <Textarea
               rows={3}
@@ -155,7 +146,7 @@ export default function FormPengajuan() {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
-            {loading ? "Mengirim..." : "Kirim Pengajuan"}
+            {loading ? "Menyimpan..." : "Simpan Donasi"}
           </Button>
         </form>
       </div>

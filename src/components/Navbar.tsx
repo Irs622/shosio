@@ -1,44 +1,41 @@
-import { Link, useLocation } from 'react-router-dom';
-import { User, FileText } from 'lucide-react';
+import { Link } from "react-router-dom";
+import { User, FileText } from "lucide-react";
 
 export default function Navbar() {
-  const location = useLocation();
-  
-  const isActive = (path: string) => location.pathname === path;
-  
   return (
-    <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-green-500 rounded-xl flex items-center justify-center">
-              <span className="text-white">K</span>
-            </div>
-            <span className="text-slate-900">KOLEKTIF</span>
-          </Link>
-          
-          <div className="flex items-center gap-8">
-            <Link 
-              to="/daftar-barang" 
-              className={`transition-colors ${isActive('/daftar-barang') ? 'text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              Daftar Barang
-            </Link>
-            <Link 
-              to="/profil" 
-              className={`flex items-center gap-2 transition-colors ${isActive('/profil') ? 'text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              <User className="w-4 h-4" />
-              Profil
-            </Link>
-            <Link 
-              to="/sop" 
-              className={`flex items-center gap-2 transition-colors ${isActive('/sop') ? 'text-blue-600' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              <FileText className="w-4 h-4" />
-              SOP
-            </Link>
+    <nav className="w-full bg-white border-b border-slate-200 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-8 py-3 flex items-center justify-between">
+        {/* Kiri: logo K KOLEKTIF */}
+        <Link to="/" className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-sky-500 to-emerald-500 flex items-center justify-center">
+            <span className="text-white font-semibold text-sm">K</span>
           </div>
+          <span className="text-sm font-semibold tracking-wide text-slate-800">
+            KOLEKTIF
+          </span>
+        </Link>
+
+        {/* Kanan: menu (Daftar Barang, Profil, SOP) */}
+        <div className="flex items-center gap-8 text-sm text-slate-700">
+          <Link to="/daftar-barang" className="hover:text-slate-900">
+            Daftar Barang
+          </Link>
+
+          <Link
+            to="/profil"
+            className="flex items-center gap-1 hover:text-slate-900"
+          >
+            <User className="w-4 h-4" />
+            <span>Profil</span>
+          </Link>
+
+          <Link
+            to="/sop"
+            className="flex items-center gap-1 hover:text-slate-900"
+          >
+            <FileText className="w-4 h-4" />
+            <span>SOP</span>
+          </Link>
         </div>
       </div>
     </nav>

@@ -1,148 +1,165 @@
-import { Link, useParams } from 'react-router-dom';
-import Navbar from './Navbar';
-import Footer from './Footer';
-import { Button } from './ui/button';
-import { CheckCircle2, Calendar, MapPin, User, Package } from 'lucide-react';
+import { useEffect, useState } from "react";
+import Navbar from "./Navbar";
+import Footer from "./Footer";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { supabase } from "../lib/supabaseClient";
+
+type Transaksi = {
+  id: number;
+  post_id: number;
+  nama_barang: string | null;
+  tipe: string;
+  status: string;
+  created_at: string;
+};
 
 export default function KonfirmasiTransaksi() {
-  const { id } = useParams();
-  
-  const transaksi = {
-    id: '12345',
-    barang: 'Kalkulus dan Geometri Analitik Jilid 1',
-    donatur: 'Ahmad Rizki',
-    penerima: 'Siti Aminah',
-    waktu: 'Senin, 20 November 2025 - 13:00',
-    lokasi: 'Kampus FST, Gedung A, Lantai 2',
-    status: 'Menunggu Konfirmasi',
-    catatan: 'Barang sudah siap diambil. Silakan hubungi donatur 15 menit sebelum waktu pengambilan.'
+  const [data, setData] = useState<Transaksi[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadTransaksi();
+  }, []);
+
+  async function loadTransaksi() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("peminjam_id", 1) // user sementara
+      .order("created_at", { ascending: false });
+
+    if (error) console.error(error);
+    else setData(data as Transaksi[]);
+
+    setLoading(false);
+  }
+
+  async function updateStatus(id: number, status: string) {
+    const { error } = await supabase
+      .from("transactions")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error(error);
+      alert("Gagal memperbarui status.");
+    } else {
+      loadTransaksi(); // refresh tampilan
+    }
+  }
+
+  async function selesaiDanTambahReputasi(id: number) {
+    // Tambah reputasi log
+    await supabase.from("reputasi_logs").insert({
+      transaksi_id: id,
+      from_profile_id: 1,
+      to_profile_id: 1,
+      skor: 95,
+      catatan: "Transaksi selesai dengan baik.",
+    });
+
+    // Update status transaksi menjadi selesai
+    await updateStatus(id, "Selesai");
+  }
+
+  const statusStyle = (status: string) => {
+    if (status === "Menunggu")
+      return "bg-amber-100 text-amber-700 border-amber-200";
+    if (status === "Disetujui")
+      return "bg-green-100 text-green-700 border-green-200";
+    if (status === "Ditolak")
+      return "bg-red-100 text-red-700 border-red-200";
+    if (status === "Dibatalkan")
+      return "bg-gray-200 text-gray-700 border-gray-300";
+    if (status === "Selesai")
+      return "bg-blue-100 text-blue-700 border-blue-200";
+    return "";
   };
-  
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
-      
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        {/* Success Message */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 mb-6">
-          <div className="text-center mb-6">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
-            </div>
-            <h1 className="text-slate-900 mb-2">Pengajuan Diterima!</h1>
-            <p className="text-slate-600">
-              Donatur telah menyetujui pengajuanmu. Berikut detail transaksi yang harus kamu perhatikan.
-            </p>
-          </div>
-        </div>
-        
-        {/* Transaction Details */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 mb-6">
-          <h2 className="text-slate-900 mb-6">Ringkasan Transaksi</h2>
-          
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Package className="w-6 h-6 text-blue-600" />
+
+      <div className="max-w-4xl mx-auto px-6 py-10 space-y-6">
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">
+          Konfirmasi Transaksi
+        </h1>
+        <p className="text-slate-600">
+          Riwayat transaksi 
+        </p>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-4">
+          {loading ? (
+            <p className="text-sm text-slate-500">Memuat transaksi...</p>
+          ) : data.length === 0 ? (
+            <p className="text-sm text-slate-500">Belum ada transaksi.</p>
+          ) : (
+            data.map((t) => (
+              <div
+                key={t.id}
+                className="border border-slate-200 p-4 rounded-xl flex flex-col gap-3"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-semibold">{t.nama_barang}</p>
+                    <p className="text-xs text-slate-500">
+                      {new Date(t.created_at).toLocaleString("id-ID")}
+                    </p>
+                  </div>
+
+                  <Badge className={`${statusStyle(t.status)} text-xs`}>
+                    {t.status}
+                  </Badge>
+                </div>
+
+                {/* Aksi berdasarkan status */}
+                <div className="flex gap-3 flex-wrap">
+                  {t.status === "Menunggu" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => updateStatus(t.id, "Dibatalkan")}
+                      >
+                        Batalkan
+                      </Button>
+
+                      <Button
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => updateStatus(t.id, "Disetujui")}
+                      >
+                        Setujui
+                      </Button>
+
+                      <Button
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={() => updateStatus(t.id, "Ditolak")}
+                      >
+                        Tolak
+                      </Button>
+                    </>
+                  )}
+
+                  {t.status === "Disetujui" && (
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => selesaiDanTambahReputasi(t.id)}
+                    >
+                      Tandai Selesai
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-slate-500 text-sm mb-1">Barang</p>
-                <p className="text-slate-900">{transaksi.barang}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <User className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-slate-500 text-sm mb-1">Donatur</p>
-                <p className="text-slate-900">{transaksi.donatur}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <User className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-slate-500 text-sm mb-1">Penerima</p>
-                <p className="text-slate-900">{transaksi.penerima}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Calendar className="w-6 h-6 text-amber-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-slate-500 text-sm mb-1">Waktu Pengambilan</p>
-                <p className="text-slate-900">{transaksi.waktu}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-6 h-6 text-red-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-slate-500 text-sm mb-1">Lokasi Pengambilan</p>
-                <p className="text-slate-900">{transaksi.lokasi}</p>
-              </div>
-            </div>
-          </div>
-          
-          {transaksi.catatan && (
-            <div className="mt-6 bg-blue-50 rounded-xl p-4 border border-blue-100">
-              <p className="text-slate-700 text-sm">{transaksi.catatan}</p>
-            </div>
+            ))
           )}
         </div>
-        
-        {/* Important Notes */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100 mb-6">
-          <h3 className="text-slate-900 mb-3">Hal Penting yang Harus Diperhatikan:</h3>
-          <ul className="space-y-2 text-slate-700 text-sm">
-            <li className="flex items-start gap-2">
-              <span className="text-amber-600 mt-1">•</span>
-              <span>Hadir tepat waktu sesuai jadwal yang telah disepakati</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-amber-600 mt-1">•</span>
-              <span>Hubungi donatur jika ada perubahan jadwal atau kendala</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-amber-600 mt-1">•</span>
-              <span>Setelah transaksi selesai, donatur akan meminta konfirmasi untuk reputasi</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-amber-600 mt-1">•</span>
-              <span>Ketidakhadiran tanpa pemberitahuan akan mempengaruhi reputasimu</span>
-            </li>
-          </ul>
-        </div>
-        
-        {/* Actions */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
-          <h3 className="text-slate-900 mb-4">Langkah Selanjutnya</h3>
-          <p className="text-slate-600 mb-6">
-            Setelah transaksi selesai dan barang telah diserahkan, konfirmasi penyelesaian transaksi untuk memperbarui reputasi.
-          </p>
-          <div className="flex gap-4">
-            <Link to={`/reputasi/${transaksi.id}`} className="flex-1">
-              <Button size="lg" className="w-full bg-green-600 hover:bg-green-700">
-                Konfirmasi Transaksi Selesai
-              </Button>
-            </Link>
-            <Link to="/daftar-barang" className="flex-1">
-              <Button size="lg" variant="outline" className="w-full">
-                Kembali ke Daftar
-              </Button>
-            </Link>
-          </div>
-        </div>
       </div>
-      
+
       <Footer />
     </div>
   );
