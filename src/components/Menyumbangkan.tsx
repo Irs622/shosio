@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
@@ -13,11 +13,11 @@ import {
   SelectValue,
 } from "./ui/select";
 import { supabase } from "../lib/supabaseClient";
-
-const AKTIF_PROFILE_ID = 1;
+import { useAuth } from "../contexts/useAuth"; 
 
 export default function Menyumbangkan() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
 
   const [nama, setNama] = useState("");
   const [kategori, setKategori] = useState("Buku");
@@ -25,8 +25,26 @@ export default function Menyumbangkan() {
   const [deskripsi, setDeskripsi] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login");
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user && user.user_metadata?.full_name) {
+      setDonatur(user.user_metadata.full_name);
+    }
+  }, [user]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!user) {
+      alert("Anda harus login untuk melakukan donasi.");
+      navigate("/login");
+      return;
+    }
 
     const namaTrim = nama.trim();
     const donaturTrim = donatur.trim();
@@ -47,12 +65,12 @@ export default function Menyumbangkan() {
         donatur: donaturTrim,
         deskripsi: deskripsiTrim || null,
         reputasi: 90,
-        owner_id: AKTIF_PROFILE_ID,
+        owner_id: user.id,
       });
 
       if (error) {
         console.error(error);
-        alert("Gagal menyimpan donasi.");
+        alert(`Gagal menyimpan donasi: ${error.message}`);
       } else {
         alert("Terima kasih! Donasi kamu sudah tercatat ✅");
         setNama("");
@@ -61,9 +79,21 @@ export default function Menyumbangkan() {
         setKategori("Buku");
         navigate("/daftar-barang");
       }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      alert("Terjadi kesalahan sistem.");
     } finally {
       setLoading(false);
     }
+  }
+
+  // Tampilkan loading state jika auth belum siap
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <p className="text-slate-500">Memuat data pengguna...</p>
+      </div>
+    );
   }
 
   return (

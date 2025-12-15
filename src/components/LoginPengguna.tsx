@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-// Catatan: Menggunakan 'Link' dari react-router-dom untuk navigasi "Daftar di sini"
+import { supabase } from '../lib/supabaseClient'; // Impor supabase client
 
 const LoginPengguna = () => {
     const [email, setEmail] = useState('');
@@ -18,19 +18,36 @@ const LoginPengguna = () => {
             return;
         }
 
-        // --- Logika Autentikasi Dummy (Ganti dengan API Anda) ---
+        // --- Logika Autentikasi dengan Supabase ---
         try {
-            const isLoginSuccessful = true; // Anggap berhasil
-            
-            if (isLoginSuccessful) {
+            const { data, error: signInError } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (signInError) {
+                throw signInError;
+            }
+
+            if (data.user) {
                 alert('Login Berhasil! Mengarahkan ke Beranda.');
-                navigate('/'); 
+                navigate('/');
             } else {
-                setError('Email atau password salah. Coba lagi.');
+                setError('Login gagal. Periksa kembali email dan password Anda.');
             }
             
         } catch (err) {
-            setError('Terjadi masalah saat mencoba login.');
+            console.error('Error saat login:', err);
+            
+            const errorMessage = err.message || "";
+            
+            if (errorMessage.includes("Email not confirmed")) {
+                setError('Akun belum aktif. Silakan cek email Anda untuk verifikasi.');
+            } else if (errorMessage.includes("Invalid login credentials")) {
+                setError('Email atau password salah.');
+            } else {
+                setError('Terjadi kesalahan saat mencoba masuk.');
+            }
         }
     };
 

@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { AuthContext } from './useAuth'; 
-import React, { useState, useEffect, ReactNode } from 'react';
+import { AuthContext } from './useAuth';
+import React, { useState, useEffect, ReactNode, useContext } from 'react';
 
 // --- Definisi Tipe Data ---
 
@@ -19,8 +18,6 @@ interface AuthProviderProps {
 }
 
 // --- Context dan Hook ---
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Hook untuk kemudahan penggunaan AuthContext
 export const useAuth = () => {

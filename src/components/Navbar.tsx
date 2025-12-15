@@ -1,8 +1,17 @@
-import { Link } from "react-router-dom";
-import { User, FileText, Search, Plus } from "lucide-react"; // Menambahkan icon baru
-import { Button } from './ui/button'; // Anda menggunakannya di LandingPage, jadi saya asumsikan ada.
+import { Link, useNavigate } from "react-router-dom";
+import { User, FileText, Search, Plus, LogOut } from "lucide-react"; // Menambahkan icon LogOut
+import { Button } from './ui/button';
+import { useAuth } from "../contexts/useAuth"; // Impor hook useAuth
 
 export default function Navbar() {
+  const { user, signOut } = useAuth(); // Ambil status user dan fungsi signOut
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/'); // Arahkan ke homepage setelah logout
+  };
+
   return (
     <nav className="w-full bg-white border-b border-slate-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-8 py-3 flex items-center justify-between">
@@ -19,47 +28,56 @@ export default function Navbar() {
         {/* Tengah: Menu Utama */}
         <div className="flex items-center gap-6 text-sm text-slate-700">
           
-          {/* Menu Jelajahi (Opsional, berdasarkan screenshot: Q Jelajahi) */}
           <Link to="/daftar-barang" className="flex items-center gap-1 hover:text-slate-900">
             <Search className="w-4 h-4" />
             <span>Jelajahi</span>
           </Link>
 
-          {/* Menu Beri Donasi */}
           <Link to="/menyumbangkan" className="flex items-center gap-1 hover:text-slate-900">
             <Plus className="w-4 h-4" />
             <span>Beri Donasi</span>
           </Link>
 
-          {/* Menu SOP */}
           <Link to="/sop" className="flex items-center gap-1 hover:text-slate-900">
             <FileText className="w-4 h-4" />
             <span>SOP</span>
           </Link>
           
-          {/* Menu Profil (Jika user sudah login, Anda bisa menggunakan ini) */}
-          {/* <Link to="/profil" className="flex items-center gap-1 hover:text-slate-900">
-            <User className="w-4 h-4" />
-            <span>Profil</span>
-          </Link> */}
+          {/* Tampilkan menu Profil hanya jika sudah login */}
+          {user && (
+            <Link to="/profil" className="flex items-center gap-1 hover:text-slate-900">
+              <User className="w-4 h-4" />
+              <span>Profil</span>
+            </Link>
+          )}
         </div>
         
-        {/* Kanan: Tombol Autentikasi (Belum Punya Akun) */}
+        {/* Kanan: Tombol Autentikasi Dinamis */}
         <div className="flex items-center gap-4">
-            {/* CATATAN: 
-                Secara default, saya asumsikan pengguna belum login, 
-                maka tombol yang muncul adalah "Belum Punya Akun?". 
-                Jika Anda ingin tombol "Masuk" dan "Profil", 
-                logika ini harus menggunakan state autentikasi.
-            */}
-            
-            <Link to="/registrasi"> 
-                {/* Ini adalah tombol yang Anda cari! */}
-                <Button className="bg-blue-600 hover:bg-blue-700 flex items-center gap-1">
-                    <User className="w-4 h-4 mr-1" />
-                    Belum Punya Akun?
+            {user ? (
+                // Jika user login, tampilkan tombol Logout
+                <Button 
+                    onClick={handleLogout}
+                    variant="outline" 
+                    className="flex items-center gap-1"
+                >
+                    <LogOut className="w-4 h-4 mr-1" />
+                    Keluar
                 </Button>
-            </Link>
+            ) : (
+                // Jika tidak login, tampilkan tombol Masuk dan Daftar
+                <>
+                    <Link to="/login">
+                        <Button variant="ghost">Masuk</Button>
+                    </Link>
+                    <Link to="/registrasi"> 
+                        <Button className="bg-blue-600 hover:bg-blue-700 flex items-center gap-1">
+                            <User className="w-4 h-4 mr-1" />
+                            Daftar
+                        </Button>
+                    </Link>
+                </>
+            )}
         </div>
       </div>
     </nav>

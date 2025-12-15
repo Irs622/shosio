@@ -5,6 +5,7 @@ import Footer from "./Footer";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../contexts/useAuth"; // 1. Import useAuth
 import { Book, Package, Laptop, ArrowLeft, Award } from "lucide-react";
 
 type Barang = {
@@ -15,6 +16,7 @@ type Barang = {
   donatur: string;
   reputasi: number;
   deskripsi?: string | null;
+  owner_id: string; // Tambahkan owner_id untuk validasi
 };
 
 function getIconForKategori(kategori: string) {
@@ -27,6 +29,7 @@ function getIconForKategori(kategori: string) {
 export default function DetailBarang() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth(); // 2. Ambil user dari context
 
   const [barang, setBarang] = useState<Barang | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +46,9 @@ export default function DetailBarang() {
 
     const { data, error } = await supabase
       .from("posts")
-      .select("id, nama, kategori, status, donatur, reputasi, deskripsi")
+      .select(
+        "id, nama, kategori, status, donatur, reputasi, deskripsi, owner_id"
+      )
       .eq("id", Number(id))
       .single();
 
@@ -58,17 +63,31 @@ export default function DetailBarang() {
   }
 
   async function handleAjukan() {
+    // 3. Validasi Barang
     if (!barang) return;
+
+    // 4. Validasi Login
+    if (!user) {
+      alert("Silakan login terlebih dahulu untuk mengajukan permintaan.");
+      navigate("/login");
+      return;
+    }
+
+    // 5. Validasi Self-Request (Mencegah user minta barang sendiri)
+    if (user.id === barang.owner_id) {
+      alert(
+        "Anda tidak dapat mengajukan permintaan untuk barang milik sendiri."
+      );
+      return;
+    }
 
     setRequesting(true);
 
     try {
-      // sementara: pakai user id 1 sebagai peminjam & pemilik
-      // nanti kalau sudah ada auth, tinggal diganti ke user yang login
       const { error } = await supabase.from("transactions").insert({
         post_id: barang.id,
-        pemilik_id: 1,
-        peminjam_id: 1,
+        pemilik_id: barang.owner_id, // Gunakan owner_id dari data barang
+        peminjam_id: user.id, // Gunakan ID user yang sedang login
         tipe:
           barang.status === "Tukar"
             ? "Tukar"
@@ -80,12 +99,16 @@ export default function DetailBarang() {
       });
 
       if (error) {
-        console.error(error);
-        alert("Gagal mengajukan permintaan 😢");
+        console.error("Transaction Error:", error);
+        alert(`Gagal mengajukan permintaan: ${error.message}`);
       } else {
         alert("Permintaan berhasil dikirim ✅");
-        navigate("/konfirmasi-transaksi");
+        // Arahkan ke halaman riwayat donasi atau konfirmasi
+        navigate("/riwayat-donasi");
       }
+    } catch (err) {
+      console.error("Unexpected Error:", err);
+      alert("Terjadi kesalahan sistem.");
     } finally {
       setRequesting(false);
     }
@@ -93,10 +116,8 @@ export default function DetailBarang() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar />
-        <div className="max-w-3xl mx-auto px-6 py-10">Memuat data...</div>
-        <Footer />
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-500">Memuat data...</p>
       </div>
     );
   }
@@ -122,6 +143,8 @@ export default function DetailBarang() {
   }
 
   const Icon = getIconForKategori(barang.kategori);
+  // Cek apakah barang ini milik user yang sedang login
+  const isOwner = user?.id === barang.owner_id;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -195,13 +218,22 @@ export default function DetailBarang() {
           )}
 
           <div className="pt-2">
-            <Button
-              onClick={handleAjukan}
-              disabled={requesting}
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              {requesting ? "Mengirim..." : "Ajukan permintaan / tukar"}
-            </Button>
+            {isOwner ? (
+              <Button
+                disabled
+                className="w-full bg-slate-100 text-slate-400 border border-slate-200"
+              >
+                Ini adalah barang Anda sendiri
+              </Button>
+            ) : (
+              <Button
+                onClick={handleAjukan}
+                disabled={requesting}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {requesting ? "Mengirim..." : "Ajukan permintaan / tukar"}
+              </Button>
+            )}
           </div>
         </div>
       </div>
