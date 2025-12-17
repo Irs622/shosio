@@ -16,7 +16,7 @@ import { Book, Package, Laptop, Award } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 
 type Barang = {
-  id: number;
+  id: string; // ← uuid
   nama: string;
   kategori: string;
   status: string;
@@ -25,6 +25,7 @@ type Barang = {
   deskripsi?: string | null;
 };
 
+
 function getIconForKategori(kategori: string) {
   if (kategori === "Buku") return Book;
   if (kategori === "Elektronik") return Laptop;
@@ -32,64 +33,97 @@ function getIconForKategori(kategori: string) {
   return Package;
 }
 
+function extractKategori(description?: string | null) {
+  if (!description) return "Lainnya";
+  if (description.startsWith("Buku")) return "Buku";
+  if (description.startsWith("Elektronik")) return "Elektronik";
+  if (description.startsWith("Perlengkapan")) return "Perlengkapan";
+  return "Lainnya";
+}
+
+
 export default function DaftarBarang() {
   const [kategoriFilter, setKategoriFilter] = useState<string>("Semua");
   const [dataBarang, setDataBarang] = useState<Barang[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
+  async function ambilDonasi(donationId: string) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-      const { data, error } = await supabase
-        .from("posts")
-        .select("id, nama, kategori, status, donatur, reputasi, deskripsi")
-        .order("id", { ascending: true });
+  if (!user) {
+    alert("Silakan login untuk mengambil donasi.");
+    return;
+  }
 
-      if (error) {
-        console.error("Supabase error:", error);
-      } else if (data) {
-        setDataBarang(data as Barang[]);
-      }
+  const { error } = await supabase
+    .from("donations")
+    .update({
+      status: "taken",
+      taken_by: user.id,
+    })
+    .eq("id", donationId);
 
-      setLoading(false);
+  if (error) {
+    console.error(error);
+    alert("Donasi sudah diambil oleh orang lain.");
+  } else {
+    alert("Donasi berhasil diambil 🙌");
+  }
+}
+
+
+useEffect(() => {
+  async function loadData() {
+    setLoading(true);
+
+    
+
+   const { data, error } = await supabase
+  .from("donations")
+  .select("id, title, description, status")
+  .order("created_at", { ascending: false });
+
+
+    if (error) {
+      console.error("Supabase error:", error);
+    } else if (data) {
+      const mapped: Barang[] = data.map((item: any) => ({
+        id: item.id,
+        nama: item.title,
+        kategori: extractKategori(item.description),
+        status: item.status,
+        donatur: item.profiles?.full_name ?? "Anonim",
+        reputasi: item.profiles?.reputation ?? 0,
+        deskripsi: item.description,
+      }));
+
+      setDataBarang(mapped);
     }
 
-    loadData();
+    setLoading(false);
+  }
 
-    const channel = supabase
-      .channel("public:posts")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "posts" },
-        (payload) => {
-          setDataBarang((current) => {
-            if (payload.eventType === "INSERT") {
-              return [payload.new as Barang, ...current];
-            }
-            if (payload.eventType === "UPDATE") {
-              return current.map((item) =>
-                item.id === (payload.new as Barang).id
-                  ? (payload.new as Barang)
-                  : item
-              );
-            }
-            if (payload.eventType === "DELETE") {
-              return current.filter(
-                (item) => item.id !== (payload.old as Barang).id
-              );
-            }
-            return current;
-          });
-        }
-      )
-      .subscribe();
+  loadData();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  const channel = supabase
+    .channel("public:donations")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "donations" },
+      () => {
+        loadData();
+      }
+    )
+    .subscribe();
 
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
+
+  
   const filteredData =
     kategoriFilter === "Semua"
       ? dataBarang
@@ -166,8 +200,26 @@ export default function DaftarBarang() {
                             : "bg-blue-100 text-blue-700"
                         }`}
                       >
-                        {item.status}
+                        <Badge
+  className={`text-xs ${
+    item.status === "available"
+      ? "bg-green-100 text-green-700"
+      : "bg-slate-200 text-slate-600"
+  }`}
+>
+  {item.status === "available" ? "Tersedia" : "Sudah Diambil"}
+</Badge>
+
                       </Badge>
+                      {item.status === "available" && (
+  <Button
+    onClick={() => ambilDonasi(item.id)}
+    className="w-full mt-2 bg-green-600 hover:bg-green-700"
+  >
+    Ambil Donasi
+  </Button>
+)}
+
                     </div>
                   </div>
                 </div>

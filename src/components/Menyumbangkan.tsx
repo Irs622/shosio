@@ -38,8 +38,56 @@ export default function Menyumbangkan() {
   }, [user]);
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  e.preventDefault();
 
+<<<<<<< HEAD
+  if (!user) {
+    alert("Anda harus login untuk melakukan donasi.");
+    navigate("/login");
+    return;
+  }
+
+  const namaTrim = nama.trim();
+  const donaturTrim = donatur.trim();
+  const deskripsiTrim = deskripsi.trim();
+
+  if (!namaTrim || !donaturTrim) {
+    alert("Nama barang dan nama donatur wajib diisi.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const { error } = await supabase.from("donations").insert({
+      title: namaTrim,
+      description: `${kategori}${deskripsiTrim ? " - " + deskripsiTrim : ""}`,
+      amount: 0, // non-uang, bisa dikembangkan nanti
+      created_by: user.id,
+    });
+
+    if (error) {
+      console.error(error);
+      alert(`Gagal menyimpan donasi: ${error.message}`);
+    } else {
+      alert("Terima kasih! Donasi kamu sudah tercatat ✅");
+
+      setNama("");
+      setDonatur("");
+      setDeskripsi("");
+      setKategori("Buku");
+
+      navigate("/daftar-barang");
+    }
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    alert("Terjadi kesalahan sistem.");
+  } finally {
+    setLoading(false);
+  }
+}
+
+=======
     if (!user) {
       alert("Anda harus login untuk melakukan donasi.");
       navigate("/login");
@@ -96,6 +144,7 @@ export default function Menyumbangkan() {
     );
   }
 
+>>>>>>> f7ce4ff5f9c80c76f8ceb18f18247396dee86e80
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
